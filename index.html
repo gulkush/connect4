@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Connect 4 Online</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="header">
+        <div>
+          <h1>Connect 4 Online</h1>
+          <p class="subtitle">Invite a friend and play in real time.</p>
+        </div>
+        <div class="status">
+          <span id="turn-indicator" class="pill">Waiting…</span>
+          <span id="timer" class="pill">60:00</span>
+        </div>
+      </header>
+
+      <section class="panel">
+        <div class="actions">
+          <button id="create-btn">Create Online Game</button>
+          <button id="local-btn" class="secondary">Play Local</button>
+          <button id="copy-link-btn" class="secondary" disabled>Copy Invite Link</button>
+        </div>
+        <div class="session">
+          <div class="session-item">
+            <span class="label">Game ID</span>
+            <span id="game-id">—</span>
+          </div>
+          <div class="session-item">
+            <span class="label">You are</span>
+            <span id="player-label">Spectator</span>
+          </div>
+          <div class="session-item">
+            <span class="label">Status</span>
+            <span id="game-status">No game</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="board-wrapper">
+        <div id="board" class="board" aria-label="Connect 4 board" role="grid"></div>
+      </section>
+
+      <section class="footer">
+        <p id="message">Create a game to start.</p>
+      </section>
+    </main>
+
+    <script type="module" src="game.js"></script>
+  </body>
+</html>
