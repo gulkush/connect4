@@ -23,8 +23,7 @@ const state = {
 
 const GAME_DURATION_MINUTES = 60;
 
-const emptyBoard = () =>
-  Array.from({ length: 6 }, () => Array.from({ length: 7 }, () => 0));
+const emptyBoard = () => Array.from({ length: 42 }, () => 0);
 
 const initPlayerId = () => {
   const key = "connect4-player-id";
@@ -60,8 +59,9 @@ const renderBoard = (board, winCells = null) => {
     const row = Number(cell.dataset.row);
     const col = Number(cell.dataset.col);
     cell.classList.remove("player-1", "player-2", "highlight", "win");
-    if (board[row][col] === 1) cell.classList.add("player-1");
-    if (board[row][col] === 2) cell.classList.add("player-2");
+    const value = board[row * 7 + col];
+    if (value === 1) cell.classList.add("player-1");
+    if (value === 2) cell.classList.add("player-2");
     if (winCells && winCells.has(`${row},${col}`)) cell.classList.add("win");
   });
 };
@@ -180,14 +180,14 @@ const getWinner = (board) => {
 
   for (let r = 0; r < rows; r += 1) {
     for (let c = 0; c < cols; c += 1) {
-      const player = board[r][c];
+      const player = board[r * 7 + c];
       if (!player) continue;
       for (const [dr, dc] of directions) {
         let count = 1;
         for (let k = 1; k < 4; k += 1) {
           const nr = r + dr * k;
           const nc = c + dc * k;
-          if (!inBounds(nr, nc) || board[nr][nc] !== player) break;
+          if (!inBounds(nr, nc) || board[nr * 7 + nc] !== player) break;
           count += 1;
         }
         if (count >= 4) return player;
@@ -210,14 +210,14 @@ const getWinningCells = (board) => {
 
   for (let r = 0; r < rows; r += 1) {
     for (let c = 0; c < cols; c += 1) {
-      const player = board[r][c];
+      const player = board[r * 7 + c];
       if (!player) continue;
       for (const [dr, dc] of directions) {
         const coords = [[r, c]];
         for (let k = 1; k < 4; k += 1) {
           const nr = r + dr * k;
           const nc = c + dc * k;
-          if (!inBounds(nr, nc) || board[nr][nc] !== player) break;
+          if (!inBounds(nr, nc) || board[nr * 7 + nc] !== player) break;
           coords.push([nr, nc]);
         }
         if (coords.length === 4) {
@@ -324,11 +324,12 @@ const handleLocalMove = (column) => {
   if (state.game.status !== "local") return;
   if (isExpired()) return;
 
-  const board = state.game.board.map((row) => row.slice());
+  const board = state.game.board.slice();
   let placedRow = -1;
-  for (let row = board.length - 1; row >= 0; row -= 1) {
-    if (board[row][column] === 0) {
-      board[row][column] = state.game.currentPlayer;
+  for (let row = 5; row >= 0; row -= 1) {
+    const idx = row * 7 + column;
+    if (board[idx] === 0) {
+      board[idx] = state.game.currentPlayer;
       placedRow = row;
       break;
     }

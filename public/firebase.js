@@ -1,4 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+
 import {
   getFirestore,
   doc,
@@ -32,14 +33,12 @@ if (isPlaceholder) {
 }
 
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 const db = getFirestore(app);
 
 const COLLECTION = "games";
 const GAME_DURATION_MINUTES = 60;
 
-const emptyBoard = () =>
-  Array.from({ length: 6 }, () => Array.from({ length: 7 }, () => 0));
+const emptyBoard = () => Array.from({ length: 42 }, () => 0);
 
 export const createGame = async (playerId) => {
   const gameId = crypto.randomUUID();
@@ -137,11 +136,12 @@ export const makeMove = async ({ gameId, playerId, column }) => {
       throw new Error("Not your turn");
     }
 
-    const board = data.board.map((row) => row.slice());
+    const board = data.board.slice();
     let placedRow = -1;
-    for (let row = board.length - 1; row >= 0; row -= 1) {
-      if (board[row][column] === 0) {
-        board[row][column] = playerNumber;
+    for (let row = 5; row >= 0; row -= 1) {
+      const idx = row * 7 + column;
+      if (board[idx] === 0) {
+        board[idx] = playerNumber;
         placedRow = row;
         break;
       }
