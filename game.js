@@ -3,6 +3,7 @@ const createBtn = document.getElementById("create-btn");
 const localBtn = document.getElementById("local-btn");
 const forfeitBtn = document.getElementById("forfeit-btn");
 const copyBtn = document.getElementById("copy-link-btn");
+const feedbackBtn = document.getElementById("feedback-btn");
 const gameIdEl = document.getElementById("game-id");
 const playerLabelEl = document.getElementById("player-label");
 const playerDotEl = document.getElementById("player-dot");
@@ -526,6 +527,12 @@ copyBtn.addEventListener("click", async () => {
   const link = `${window.location.origin}${window.location.pathname}?game=${state.gameId}`;
   await navigator.clipboard.writeText(link);
   setMessage("Invite link copied to clipboard.");
+});
+
+feedbackBtn.addEventListener("click", () => {
+  window.alert(
+    "This game is created by Gulshan Budhwani. For any feedback write to us at Email: gulkush@gmail.com"
+  );
 });
 
 init();
