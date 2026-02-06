@@ -23,6 +23,7 @@
         <div class="actions">
           <button id="create-btn">Create Online Game</button>
           <button id="local-btn" class="secondary">Play Local</button>
+          <button id="forfeit-btn" class="secondary hidden">Forfeit Game</button>
           <button id="copy-link-btn" class="secondary" disabled>Copy Invite Link</button>
         </div>
         <div class="session">
@@ -32,7 +33,10 @@
           </div>
           <div class="session-item">
             <span class="label">You are</span>
-            <span id="player-label">Spectator</span>
+            <span id="player-label" class="player-label">
+              <span id="player-dot" class="player-dot"></span>
+              <span id="player-text">Spectator</span>
+            </span>
           </div>
           <div class="session-item">
             <span class="label">Status</span>
@@ -43,6 +47,10 @@
 
       <section class="board-wrapper">
         <div id="board" class="board" aria-label="Connect 4 board" role="grid"></div>
+      </section>
+
+      <section id="draw-banner" class="banner hidden" aria-live="polite">
+        Game drawn.
       </section>
 
       <section class="footer">

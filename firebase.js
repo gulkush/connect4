@@ -178,3 +178,29 @@ export const setExpired = async (gameId) => {
   const gameRef = doc(db, COLLECTION, gameId);
   await updateDoc(gameRef, { status: "expired" });
 };
+
+export const setDrawIfActive = async (gameId) => {
+  const gameRef = doc(db, COLLECTION, gameId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(gameRef);
+    if (!snap.exists()) return;
+    const data = snap.data();
+    if (data.status !== "active" || data.winner) return;
+    tx.update(gameRef, { status: "over", winner: 0 });
+  });
+};
+
+export const forfeitGame = async ({ gameId, playerId }) => {
+  const gameRef = doc(db, COLLECTION, gameId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(gameRef);
+    if (!snap.exists()) return;
+    const data = snap.data();
+    if (data.status !== "active") return;
+    const playerNumber =
+      data.players.p1 === playerId ? 1 : data.players.p2 === playerId ? 2 : 0;
+    if (playerNumber === 0) return;
+    const winner = playerNumber === 1 ? 2 : 1;
+    tx.update(gameRef, { status: "over", winner });
+  });
+};

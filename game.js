@@ -1,13 +1,17 @@
 const boardEl = document.getElementById("board");
 const createBtn = document.getElementById("create-btn");
 const localBtn = document.getElementById("local-btn");
+const forfeitBtn = document.getElementById("forfeit-btn");
 const copyBtn = document.getElementById("copy-link-btn");
 const gameIdEl = document.getElementById("game-id");
 const playerLabelEl = document.getElementById("player-label");
+const playerDotEl = document.getElementById("player-dot");
+const playerTextEl = document.getElementById("player-text");
 const gameStatusEl = document.getElementById("game-status");
 const messageEl = document.getElementById("message");
 const turnIndicatorEl = document.getElementById("turn-indicator");
 const timerEl = document.getElementById("timer");
+const drawBannerEl = document.getElementById("draw-banner");
 
 const state = {
   mode: "idle",
@@ -36,6 +40,16 @@ const initPlayerId = () => {
 
 const setMessage = (text) => {
   messageEl.textContent = text;
+};
+
+const setDrawBanner = (visible) => {
+  drawBannerEl.classList.toggle("hidden", !visible);
+};
+
+const setOnlineControls = ({ inProgress }) => {
+  createBtn.classList.toggle("hidden", inProgress);
+  localBtn.classList.toggle("hidden", inProgress);
+  forfeitBtn.classList.toggle("hidden", !inProgress);
 };
 
 const buildBoard = () => {
@@ -96,9 +110,12 @@ const isExpired = () => state.expiresAtMs && state.expiresAtMs <= Date.now();
 const updateStatusUI = (game) => {
   if (!game) {
     gameStatusEl.textContent = "No game";
-    playerLabelEl.textContent = "Spectator";
+    playerTextEl.textContent = "Spectator";
+    playerDotEl.classList.remove("red", "blue");
     turnIndicatorEl.textContent = "Waiting…";
     turnIndicatorEl.style.background = "";
+    setDrawBanner(false);
+    setOnlineControls({ inProgress: false });
     return;
   }
 
@@ -113,14 +130,28 @@ const updateStatusUI = (game) => {
   gameStatusEl.textContent = statusMap[game.status] ?? game.status;
 
   if (state.mode === "local") {
-    playerLabelEl.textContent = game.currentPlayer === 1 ? "Player 1" : "Player 2";
+    if (game.currentPlayer === 1) {
+      playerTextEl.textContent = "Player 1 (Red)";
+      playerDotEl.classList.add("red");
+      playerDotEl.classList.remove("blue");
+    } else {
+      playerTextEl.textContent = "Player 2 (Blue)";
+      playerDotEl.classList.add("blue");
+      playerDotEl.classList.remove("red");
+    }
   } else {
-    playerLabelEl.textContent =
-      state.playerNumber === 1
-        ? "Player 1"
-        : state.playerNumber === 2
-        ? "Player 2"
-        : "Spectator";
+    if (state.playerNumber === 1) {
+      playerTextEl.textContent = "Player 1 (Red)";
+      playerDotEl.classList.add("red");
+      playerDotEl.classList.remove("blue");
+    } else if (state.playerNumber === 2) {
+      playerTextEl.textContent = "Player 2 (Blue)";
+      playerDotEl.classList.add("blue");
+      playerDotEl.classList.remove("red");
+    } else {
+      playerTextEl.textContent = "Spectator";
+      playerDotEl.classList.remove("red", "blue");
+    }
   }
 
   if (game.status === "active" || game.status === "local") {
@@ -139,20 +170,29 @@ const updateStatusUI = (game) => {
           : "rgba(242, 95, 92, 0.2)";
       }
     }
+    setDrawBanner(false);
+    setOnlineControls({ inProgress: state.mode === "online" && game.status === "active" });
   } else if (game.status === "over") {
     if (game.winner) {
       turnIndicatorEl.textContent = `Player ${game.winner} wins`;
       turnIndicatorEl.style.background = "rgba(81, 216, 138, 0.25)";
+      setDrawBanner(false);
     } else {
       turnIndicatorEl.textContent = "Game over";
       turnIndicatorEl.style.background = "";
+      setDrawBanner(true);
     }
+    setOnlineControls({ inProgress: false });
   } else if (game.status === "waiting") {
     turnIndicatorEl.textContent = "Waiting for player 2";
     turnIndicatorEl.style.background = "";
+    setDrawBanner(false);
+    setOnlineControls({ inProgress: false });
   } else if (game.status === "expired") {
     turnIndicatorEl.textContent = "Expired";
     turnIndicatorEl.style.background = "rgba(242, 95, 92, 0.2)";
+    setDrawBanner(false);
+    setOnlineControls({ inProgress: false });
   }
 };
 
@@ -196,6 +236,8 @@ const getWinner = (board) => {
   }
   return 0;
 };
+
+const isBoardFull = (board) => board.every((cell) => cell !== 0);
 
 const getWinningCells = (board) => {
   const rows = 6;
@@ -283,6 +325,13 @@ const setWinnerIfNeeded = async (game) => {
   await state.firebaseApi.setWinnerIfActive({ gameId: state.gameId, winner });
 };
 
+const setDrawIfNeeded = async (game) => {
+  if (state.mode !== "online") return;
+  if (game.status !== "active" || game.winner) return;
+  if (!isBoardFull(game.board)) return;
+  await state.firebaseApi.setDrawIfActive(state.gameId);
+};
+
 const handleSnapshot = async (game) => {
   state.game = game;
   if (!game) {
@@ -312,11 +361,12 @@ const handleSnapshot = async (game) => {
   } else if (game.status === "active") {
     setMessage(state.playerNumber === game.currentPlayer ? "Your move." : "Waiting for opponent.");
   } else if (game.status === "over") {
-    setMessage(game.winner ? `Player ${game.winner} wins!` : "Game over.");
+    setMessage(game.winner ? `Player ${game.winner} wins!` : "Game drawn.");
   }
 
   await markExpiredIfNeeded(game);
   await setWinnerIfNeeded(game);
+  await setDrawIfNeeded(game);
 };
 
 const handleLocalMove = (column) => {
@@ -337,19 +387,26 @@ const handleLocalMove = (column) => {
   if (placedRow === -1) return;
 
   const winner = getWinner(board);
+  const isDraw = !winner && isBoardFull(board);
   const nextPlayer = state.game.currentPlayer === 1 ? 2 : 1;
   state.game = {
     ...state.game,
     board,
     currentPlayer: winner ? state.game.currentPlayer : nextPlayer,
     winner: winner || 0,
-    status: winner ? "over" : "local",
+    status: winner || isDraw ? "over" : "local",
   };
 
   const winCells = winner ? getWinningCells(state.game.board) : null;
   renderBoard(state.game.board, winCells);
   updateStatusUI(state.game);
-  setMessage(winner ? `Player ${winner} wins!` : `Player ${state.game.currentPlayer} turn.`);
+  if (winner) {
+    setMessage(`Player ${winner} wins!`);
+  } else if (isDraw) {
+    setMessage("Game drawn.");
+  } else {
+    setMessage(`Player ${state.game.currentPlayer} turn.`);
+  }
 };
 
 const handleColumnClick = async (column) => {
@@ -404,6 +461,8 @@ const startLocalGame = () => {
   state.expiresAtMs = Date.now() + GAME_DURATION_MINUTES * 60 * 1000;
   copyBtn.disabled = true;
   gameIdEl.textContent = "Local";
+  setDrawBanner(false);
+  setOnlineControls({ inProgress: false });
   startTimer();
   renderBoard(state.game.board);
   updateStatusUI(state.game);
@@ -414,6 +473,7 @@ const init = () => {
   buildBoard();
   bindBoardHover();
   state.playerId = initPlayerId();
+  setDrawBanner(false);
 
   const params = new URLSearchParams(window.location.search);
   const gameIdFromUrl = params.get("game");
@@ -433,6 +493,8 @@ createBtn.addEventListener("click", async () => {
     window.history.replaceState({}, "", newUrl);
     setGameId(gameId);
     state.mode = "online";
+    setDrawBanner(false);
+    setOnlineControls({ inProgress: true });
     await connectToGame(gameId);
     setMessage("Game created. Share the invite link.");
   } catch (error) {
@@ -442,6 +504,19 @@ createBtn.addEventListener("click", async () => {
 
 localBtn.addEventListener("click", () => {
   startLocalGame();
+});
+
+forfeitBtn.addEventListener("click", async () => {
+  if (state.mode !== "online" || !state.gameId || !state.firebaseApi) return;
+  try {
+    await state.firebaseApi.forfeitGame({
+      gameId: state.gameId,
+      playerId: state.playerId,
+    });
+    setMessage("You forfeited. Opponent wins.");
+  } catch (error) {
+    setMessage(error.message);
+  }
 });
 
 copyBtn.addEventListener("click", async () => {
