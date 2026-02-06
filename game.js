@@ -46,10 +46,10 @@ const setDrawBanner = (visible) => {
   drawBannerEl.classList.toggle("hidden", !visible);
 };
 
-const setOnlineControls = ({ inProgress }) => {
+const setOnlineControls = ({ inProgress, canForfeit }) => {
   createBtn.classList.toggle("hidden", inProgress);
   localBtn.classList.toggle("hidden", inProgress);
-  forfeitBtn.classList.toggle("hidden", !inProgress);
+  forfeitBtn.classList.toggle("hidden", !canForfeit);
 };
 
 const buildBoard = () => {
@@ -115,7 +115,7 @@ const updateStatusUI = (game) => {
     turnIndicatorEl.textContent = "Waiting…";
     turnIndicatorEl.style.background = "";
     setDrawBanner(false);
-    setOnlineControls({ inProgress: false });
+    setOnlineControls({ inProgress: false, canForfeit: false });
     return;
   }
 
@@ -171,7 +171,10 @@ const updateStatusUI = (game) => {
       }
     }
     setDrawBanner(false);
-    setOnlineControls({ inProgress: state.mode === "online" && game.status === "active" });
+    const isPlayer = state.playerNumber > 0;
+    const inProgress = state.mode === "online" && game.status === "active" && isPlayer;
+    const canForfeit = inProgress && isPlayer;
+    setOnlineControls({ inProgress, canForfeit });
   } else if (game.status === "over") {
     if (game.winner) {
       turnIndicatorEl.textContent = `Player ${game.winner} wins`;
@@ -182,17 +185,17 @@ const updateStatusUI = (game) => {
       turnIndicatorEl.style.background = "";
       setDrawBanner(true);
     }
-    setOnlineControls({ inProgress: false });
+    setOnlineControls({ inProgress: false, canForfeit: false });
   } else if (game.status === "waiting") {
     turnIndicatorEl.textContent = "Waiting for player 2";
     turnIndicatorEl.style.background = "";
     setDrawBanner(false);
-    setOnlineControls({ inProgress: false });
+    setOnlineControls({ inProgress: false, canForfeit: false });
   } else if (game.status === "expired") {
     turnIndicatorEl.textContent = "Expired";
     turnIndicatorEl.style.background = "rgba(242, 95, 92, 0.2)";
     setDrawBanner(false);
-    setOnlineControls({ inProgress: false });
+    setOnlineControls({ inProgress: false, canForfeit: false });
   }
 };
 
@@ -462,7 +465,7 @@ const startLocalGame = () => {
   copyBtn.disabled = true;
   gameIdEl.textContent = "Local";
   setDrawBanner(false);
-  setOnlineControls({ inProgress: false });
+  setOnlineControls({ inProgress: false, canForfeit: false });
   startTimer();
   renderBoard(state.game.board);
   updateStatusUI(state.game);
@@ -494,7 +497,7 @@ createBtn.addEventListener("click", async () => {
     setGameId(gameId);
     state.mode = "online";
     setDrawBanner(false);
-    setOnlineControls({ inProgress: true });
+    setOnlineControls({ inProgress: true, canForfeit: true });
     await connectToGame(gameId);
     setMessage("Game created. Share the invite link.");
   } catch (error) {
